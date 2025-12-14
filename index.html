@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plants vs Zombies Advanced</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        
+        body {
+            background-color: #0a3d0a;
+            color: white;
+            overflow: hidden;
+            user-select: none;
+        }
+        
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background-color: #1a5c1a;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #0a2e0a;
+            height: 80px;
+        }
+        
+        .sun-counter {
+            display: flex;
+            align-items: center;
+            background-color: #2d7a2d;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            min-width: 150px;
+        }
+        
+        .sun-icon {
+            width: 40px;
+            height: 40px;
+            background-color: #ffd700;
+            border-radius: 50%;
+            margin-right: 10px;
+            position: relative;
+            box-shadow: 0 0 10px #ffd700;
+            animation: sunPulse 2s infinite alternate;
+        }
+        
+        @keyframes sunPulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.1); }
+        }
+        
+        .game-info {
+            text-align: center;
+            flex-grow: 1;
+        }
+        
+        .game-info h1 {
+            font-size: 32px;
+            margin-bottom: 5px;
+            color: #ffd700;
+            text-shadow: 2px 2px 0 #8b6914;
+            letter-spacing: 1px;
+        }
+        
+        .wave-indicator {
+            background-color: #2d7a2d;
+            padding: 5px 15px;
+            border-radius: 10px;
+            display: inline-block;
+            margin-top: 5px;
+            font-weight: bold;
+        }
+        
+        .main-content {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+        
+        .plants-panel {
+            width: 150px;
+            background-color: #1a5c1a;
+            padding: 15px 10px;
+            display: flex;
+            flex-direction: column;
+            border-right: 3px solid #0a2e0a;
+            gap: 12px;
+        }
+        
+        .plant-card {
+            background-color: #2d7a2d;
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            border: 2px solid #0a2e0a;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .plant-card:hover:not(.disabled) {
+            background-color: #3a8b3a;
+            transform: scale(1.03);
+        }
+        
+        .plant-card.selected {
+            background-color: #4ca64c;
+            border-color: #ffd700;
+            box-shadow: 0 0 15px #ffd700;
+        }
+        
+        .plant-card.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .plant-icon {
+            width: 70px;
+            height: 70px;
+            margin: 0 auto 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #3a8b3a;
+            border: 2px solid #0a2e0a;
+        }
+        
+        .plant-cost {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .sun-cost {
+            color: #ffd700;
+            margin-right: 5px;
+        }
+        
+        .plant-name {
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        .cooldown-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+            border-radius: 8px;
+        }
+        
+        .game-field {
+            flex-grow: 1;
+            position: relative;
+            background: linear-gradient(to bottom, #1a5c1a 0%, #0a3d0a 100%);
+            overflow: hidden;
+        }
+        
+        .lawn {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        
+        .cell {
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+        
+        .cell.highlighted {
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+        
+        /* Спрайты растений */
+        .plant {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            z-index: 10;
+            pointer-events: none;
+            background-size: cover;
+            image-rendering: pixelated;
+        }
+        
+        .plant.sunflower {
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><circle cx="40" cy="40" r="35" fill="%23FFD700"/><circle cx="40" cy="40" r="25" fill="%238B6914"/><circle cx="40" cy="40" r="15" fill="%23FFD700"/><path d="M40,5 L40,15 M40,65 L40,75 M5,40 L15,40 M65,40 L75,40 M15,15 L25,25 M55,55 L65,65 M15,65 L25,55 M55,25 L65,15" stroke="%238B6914" stroke-width="3"/></svg>');
+            animation: sunflowerIdle 3s infinite alternate;
+        }
+        
+        @keyframes sunflowerIdle {
+            0%, 100% { transform: rotate(-2deg); }
+            50% { transform: rotate(2deg); }
+        }
+        
+        .plant.peashooter {
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><ellipse cx="40" cy="50" rx="25" ry="30" fill="%232d7a2d"/><ellipse cx="40" cy="25" rx="20" ry="25" fill="%232d7a2d"/><circle cx="40" cy="20" r="8" fill="%230a2e0a"/><ellipse cx="45" cy="20" rx="3" ry="5" fill="%23fff"/></svg>');
+            animation: peashooterIdle 2s infinite alternate;
+        }
+        
+        @keyframes peashooterIdle {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+        
+        .plant.peashooter.shooting {
+            animation: peashooterShoot 0.5s;
+        }
+        
+        @keyframes peashooterShoot {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .plant.wallnut {
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><circle cx="40" cy="40" r="35" fill="%238B4513"/><ellipse cx="40" cy="25" rx="20" ry="15" fill="%235D2906"/><ellipse cx="40" cy="55" rx="25" ry="18" fill="%235D2906"/></svg>');
+            animation: wallnutIdle 4s infinite alternate;
+        }
+        
+        @keyframes wallnutIdle {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .plant.wallnut.damaged {
+            filter: brightness(0.8);
+        }
+        
+        .plant.wallnut.critical {
+            filter: brightness(0.6);
+            animation: wallnutCritical 0.5s infinite alternate;
+        }
+        
+        @keyframes wallnutCritical {
+            0% { filter: brightness(0.6); }
+            100% { filter: brightness(0.7); }
+        }
+        
+        /* Спрайты зомби */
+        .zombie {
+            position: absolute;
+            width: 70px;
+            height: 90px;
+            z-index: 15;
+            right: -70px;
+            background-size: cover;
+            image-rendering: pixelated;
+        }
+        
+        .zombie.normal {
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 70 90"><rect x="10" y="20" width="50" height="40" fill="%233a8b3a"/><rect x="15" y="60" width="40" height="20" fill="%232d7a2d"/><circle cx="35" cy="15" r="15" fill="%233a8b3a"/><circle cx="25" cy="12" r="5" fill="%23000"/><circle cx="45" cy="12" r="5" fill="%23000"/><rect x="20" y="25" width="30" height="5" fill="%238b6914"/><ellipse cx="35" cy="75" rx="15" ry="5" fill="%232d7a2d"/></svg>');
+            animation: zombieWalk 0.5s infinite steps(2);
+        }
+        
+        @keyframes zombieWalk {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+        
+        .zombie.fast {
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 70 90"><rect x="10" y="20" width="50" height="40" fill="%235D2906"/><rect x="15" y="60" width="40" height="20" fill="%233a8b3a"/><circle cx="35" cy="15" r="15" fill="%235D2906"/><circle cx="25" cy="12" r="5" fill="%23000"/><circle cx="45" cy="12" r="5" fill="%23000"/><rect x="20" y="25" width="30" height="5" fill="%238b6914"/><ellipse cx="35" cy="75" rx="15" ry="5" fill="%233a8b3a"/></svg>');
+            animation: zombieWalkFast 0.3s infinite steps(2);
+        }
+        
+        @keyframes zombieWalkFast {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        
+        .zombie.tough {
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 70 90"><rect x="5" y="15" width="60" height="50" fill="%231a1a1a"/><rect x="10" y="65" width="50" height="20" fill="%230a0a0a"/><circle cx="35" cy="10" r="12" fill="%231a1a1a"/><circle cx="25" cy="8" r="5" fill="%23fff"/><circle cx="45" cy="8" r="5" fill="%23fff"/><rect x="15" y="20" width="40" height="8" fill="%238b4513"/><ellipse cx="35" cy="80" rx="20" ry="5" fill="%230a0a0a"/></svg>');
+            animation: zombieWalkTough 0.7s infinite steps(2);
+        }
+        
+        @keyframes zombieWalkTough {
+            0%, 100% { transform: translateY(0) scale(1.1); }
+            50% { transform: translateY(-2px) scale(1.1); }
+        }
+        
+        .zombie.hit {
+            animation: zombieHit 0.3s;
+        }
+        
+        @keyframes zombieHit {
+            0% { filter: brightness(1); }
+            50% { filter: brightness(1.5); }
+            100% { filter: brightness(1); }
+        }
+        
+        .zombie.dying {
+            animation: zombieDie 1s forwards;
+        }
+        
+        @keyframes zombieDie {
+            0% { opacity: 1; transform: rotate(0); }
+            100% { opacity: 0; transform: rotate(90deg) translateY(50px); }
+        }
+        
+        /* Снаряды */
+        .projectile {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            background-color: #8b6914;
+            border-radius: 50%;
+            z-index: 5;
+            box-shadow: 0 0 5px #ffd700;
+        }
+        
+        .sun {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background-color: #ffd700;
+            border-radius: 50%;
+            z-index: 20;
+            cursor: pointer;
+            box-shadow: 0 0 10px #ffd700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #8b6914;
+            font-weight: bold;
+            animation: sunFloat 4s infinite alternate;
+        }
+        
+        @keyframes sunFloat {
+            0%, 100% { transform: translateY(0) rotate(0); }
+            50% { transform: translateY(-5px) rotate(10deg); }
+        }
+        
+        .sun:hover {
+            transform: scale(1.1);
+        }
+        
+        .house {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 40px;
+            height: 100%;
+            background: linear-gradient(to right, #8b4513, #a0522d);
+            z-index: 25;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-right: 3px solid #5D2906;
+        }
+        
+        .house::before {
+            content: "🏠";
+            font-size: 30px;
+            transform: rotate(90deg);
+            text-shadow: 2px 2px 0 #5D2906;
+        }
+        
+        .controls {
+            padding: 10px;
+            background-color: #1a5c1a;
+            border-top: 3px solid #0a2e0a;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            height: 70px;
+        }
+        
+        button {
+            background-color: #2d7a2d;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            transition: all 0.3s;
+            border: 2px solid #0a2e0a;
+        }
+        
+        button:hover {
+            background-color: #3a8b3a;
+            transform: translateY(-2px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            z-index: 100;
+            display: none;
+            border: 3px solid #ffd700;
+            min-width: 400px;
+        }
+        
+        .message h2 {
+            color: #ffd700;
+            margin-bottom: 15px;
+            font-size: 36px;
+            text-shadow: 2px 2px 0 #8b6914;
+        }
+        
+        .message p {
+            margin-bottom: 25px;
+            font-size: 20px;
+            line-height: 1.5;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 10px;
+        }
+        
+        .stat {
+            background-color: #2d7a2d;
+            padding: 10px 15px;
+            border-radius: 10px;
+            min-width: 120px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffd700;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #0a2e0a;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: #ffd700;
+            width: 0%;
+            transition: width 0.5s;
+        }
+        
+        .wave-progress {
+            margin: 10px 0;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <div class="sun-counter">
+                <div class="sun-icon"></div>
+                <span id="sun-count">150</span>
+            </div>
+            <div class="game-info">
+                <h1>🌱 Plants vs Zombies 🌻</h1>
+                <div class="wave-indicator">Волна: <span id="wave">1</span> / 10</div>
+                <div class="wave-progress">До следующей волны: <span id="wave-timer">30</span>с</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="wave-progress"></div>
+                </div>
+            </div>
+            <div class="stats">
+                <div class="stat">
+                    <div>Зомби</div>
+                    <div class="stat-value" id="zombie-count">0</div>
+                </div>
+                <div class="stat">
+                    <div>Растения</div>
+                    <div class="stat-value" id="plant-count">0</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="plants-panel">
+                <div class="plant-card" data-plant="sunflower" data-cost="50" data-cooldown="5">
+                    <div class="plant-icon">
+                        <div class="plant sunflower"></div>
+                    </div>
+                    <div class="plant-cost">
+                        <span class="sun-cost">50</span> ☀️
+                    </div>
+                    <div class="plant-name">Подсолнух</div>
+                    <div class="cooldown-overlay" style="display: none;">5</div>
+                </div>
+                <div class="plant-card" data-plant="peashooter" data-cost="100" data-cooldown="7">
+                    <div class="plant-icon">
+                        <div class="plant peashooter"></div>
+                    </div>
+                    <div class="plant-cost">
+                        <span class="sun-cost">100</span> ☀️
+                    </div>
+                    <div class="plant-name">Горох</div>
+                    <div class="cooldown-overlay" style="display: none;">7</div>
+                </div>
+                <div class="plant-card" data-plant="wallnut" data-cost="50" data-cooldown="10">
+                    <div class="plant-icon">
+                        <div class="plant wallnut"></div>
+                    </div>
+                    <div class="plant-cost">
+                        <span class="sun-cost">50</span> ☀️
+                    </div>
+                    <div class="plant-name">Орех</div>
+                    <div class="cooldown-overlay" style="display: none;">10</div>
+                </div>
+            </div>
+            
+            <div class="game-field">
+                <div class="house"></div>
+                <div class="lawn" id="lawn">
+                    <!-- 5x9 клеток будут созданы через JavaScript -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button id="start-wave">Начать волну сейчас</button>
+            <button id="add-sun">+50 ☀️ (тест)</button>
+            <button id="restart">Начать заново</button>
+        </div>
+    </div>
+    
+    <div class="message" id="game-over-message">
+        <h2>Игра окончена!</h2>
+        <p>Зомби добрались до вашего дома!</p>
+        <div style="margin: 20px 0;">
+            <div>Вы достигли волны: <span id="final-wave">1</span></div>
+            <div>Уничтожено зомби: <span id="final-zombies">0</span></div>
+            <div>Выращено растений: <span id="final-plants">0</span></div>
+        </div>
+        <button id="restart-btn">Играть снова</button>
+    </div>
+    
+    <div class="message" id="win-message">
+        <h2>Победа! 🏆</h2>
+        <p>Вы успешно отразили все волны зомби!</p>
+        <div style="margin: 20px 0;">
+            <div>Волн пройдено: <span id="win-wave">10</span></div>
+            <div>Уничтожено зомби: <span id="win-zombies">0</span></div>
+            <div>Выращено растений: <span id="win-plants">0</span></div>
+        </div>
+        <button id="restart-win-btn">Играть снова</button>
+    </div>
+
+    <script>
+        // Элементы DOM
+        const lawn = document.getElementById('lawn');
+        const sunCountElement = document.getElementById('sun-count');
+        const zombieCountElement = document.getElementById('zombie-count');
+        const plantCountElement = document.getElementById('plant-count');
+        const waveElement = document.getElementById('wave');
+        const waveTimerElement = document.getElementById('wave-timer');
+        const waveProgressElement = document.getElementById('wave-progress');
+        const plantCards = document.querySelectorAll('.plant-card');
+        const startWaveButton = document.getElementById('start-wave');
+        const addSunButton = document.getElementById('add-sun');
+        const restartButton = document.getElementById('restart');
+        const restartBtn = document.getElementById('restart-btn');
+        const restartWinBtn = document.getElementById('restart-win-btn');
+        const gameOverMessage = document.getElementById('game-over-message');
+        const winMessage = document.getElementById('win-message');
+        const finalWaveElement = document.getElementById('final-wave');
+        const finalZombiesElement = document.getElementById('final-zombies');
+        const finalPlantsElement = document.getElementById('final-plants');
+        const winWaveElement = document.getElementById('win-wave');
+        const winZombiesElement = document.getElementById('win-zombies');
+        const winPlantsElement = document.getElementById('win-plants');
+        
+        // Игровые переменные
+        let sunCount = 150;
+        let selectedPlant = null;
+        let wave = 1;
+        let maxWave = 10;
+        let zombiesAlive = 0;
+        let zombiesKilled = 0;
+        let plantsPlanted = 0;
+        let gameActive = true;
+        let waveActive = false;
+        let waveTimer = 30;
+        let waveInterval;
+        let plants = [];
+        let zombies = [];
+        let projectiles = [];
+        let suns = [];
+        let cells = [];
+        let cooldowns = {};
+        
+        // Настройки сложности
+        const difficultySettings = {
+            1: { zombies: 2, types: ['normal'], health: 100, speed: 0.5, interval: 3000 },
+            2: { zombies: 3, types: ['normal'], health: 110, speed: 0.6, interval: 2800 },
+            3: { zombies: 4, types: ['normal', 'fast'], health: 120, speed: 0.6, interval: 2500 },
+            4: { zombies: 5, types: ['normal', 'fast'], health: 130, speed: 0.7, interval: 2300 },
+            5: { zombies: 6, types: ['normal', 'fast'], health: 140, speed: 0.7, interval: 2100 },
+            6: { zombies: 7, types: ['normal', 'fast', 'tough'], health: 150, speed: 0.8, interval: 1900 },
+            7: { zombies: 8, types: ['normal', 'fast', 'tough'], health: 160, speed: 0.8, interval: 1700 },
+            8: { zombies: 9, types: ['normal', 'fast', 'tough'], health: 180, speed: 0.9, interval: 1500 },
+            9: { zombies: 10, types: ['normal', 'fast', 'tough'], health: 200, speed: 1.0, interval: 1300 },
+            10: { zombies: 12, types: ['normal', 'fast', 'tough'], health: 250, speed: 1.1, interval: 1100 }
+        };
+        
+        // Размеры игрового поля
+        const rows = 5;
+        const cols = 9;
+        const cellWidth = 100/cols;
+        const cellHeight = 100/rows;
+        
+        // Инициализация игры
+        function initGame() {
+            createLawn();
+            setupEventListeners();
+            generateSun();
+            startWaveTimer();
+            updateUI();
+            gameLoop();
+        }
+        
+        // Создание игрового поля
+        function createLawn() {
+            lawn.innerHTML = '';
+            cells = [];
+            
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+                    
+                    cell.style.width = `${cellWidth}%`;
+                    cell.style.height = `${cellHeight}%`;
+                    cell.style.position = 'absolute';
+                    cell.style.left = `${col * cellWidth}%`;
+                    cell.style.top = `${row * cellHeight}%`;
+                    
+                    lawn.appendChild(cell);
+                    cells.push(cell);
+                }
+            }
+        }
+        
+        // Настройка обработчиков событий
+        function setupEventListeners() {
+            // Выбор растения
+            plantCards.forEach(card => {
+                card.addEventListener('click', () => {
+                    if (gameActive && !card.classList.contains('disabled') && !card.classList.contains('cooldown')) {
+                        const cost = parseInt(card.dataset.cost);
+                        
+                        if (sunCount >= cost) {
+                            // Снимаем выделение со всех карточек
+                            plantCards.forEach(c => c.classList.remove('selected'));
+                            // Выделяем выбранную карточку
+                            card.classList.add('selected');
+                            selectedPlant = card.dataset.plant;
+                            
+                            // Подсвечиваем доступные клетки
+                            highlightCells();
+                        }
+                    }
+                });
+            });
+            
+            // Клик по игровому полю
+            lawn.addEventListener('click', (e) => {
+                if (!gameActive || !selectedPlant) return;
+                
+                const cell = e.target.closest('.cell');
+                if (!cell) return;
+                
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                
+                // Проверяем, свободна ли клетка
+                const plantAtCell = plants.find(p => p.row === row && p.col === col);
+                if (plantAtCell) return;
+                
+                // Получаем стоимость растения
+                const card = document.querySelector(`[data-plant="${selectedPlant}"]`);
+                const cost = parseInt(card.dataset.cost);
+                const cooldown = parseInt(card.dataset.cooldown);
+                
+                // Проверяем, хватает ли солнца
+                if (sunCount < cost) {
+                    alert('Недостаточно солнца!');
+                    return;
+                }
+                
+                // Проверяем, не на кулдауне ли растение
+                if (cooldowns[selectedPlant]) return;
+                
+                // Снимаем солнце
+                sunCount -= cost;
+                
+                // Создаем растение
+                createPlant(selectedPlant, row, col);
+                
+                // Активируем кулдаун для этого типа растения
+                activateCooldown(selectedPlant, cooldown, card);
+                
+                // Снимаем выделение
+                plantCards.forEach(c => c.classList.remove('selected'));
+                selectedPlant = null;
+                removeHighlight();
+                
+                // Обновляем интерфейс
+                updateUI();
+            });
+            
+            // Начать волну зомби
+            startWaveButton.addEventListener('click', () => {
+                if (!waveActive) {
+                    startWave();
+                }
+            });
+            
+            // Добавить солнце (тестовая функция)
+            addSunButton.addEventListener('click', () => {
+                sunCount += 50;
+                updateUI();
+            });
+            
+            // Перезапуск игры
+            restartButton.addEventListener('click', restartGame);
+            restartBtn.addEventListener('click', restartGame);
+            restartWinBtn.addEventListener('click', restartGame);
+        }
+        
+        // Подсветка доступных клеток
+        function highlightCells() {
+            cells.forEach(cell => {
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                
+                const plantAtCell = plants.find(p => p.row === row && p.col === col);
+                if (!plantAtCell) {
+                    cell.classList.add('highlighted');
+                }
+            });
+        }
+        
+        // Убрать подсветку
+        function removeHighlight() {
+            cells.forEach(cell => {
+                cell.classList.remove('highlighted');
+            });
+        }
+        
+        // Активация кулдауна для растения
+        function activateCooldown(plantType, cooldownTime, card) {
+            cooldowns[plantType] = true;
+            card.classList.add('cooldown');
+            
+            const overlay = card.querySelector('.cooldown-overlay');
+            overlay.style.display = 'flex';
+            overlay.textContent = cooldownTime;
+            
+            let timeLeft = cooldownTime;
+            const countdown = setInterval(() => {
+                timeLeft--;
+                overlay.textContent = timeLeft;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(countdown);
+                    cooldowns[plantType] = false;
+                    card.classList.remove('cooldown');
+                    overlay.style.display = 'none';
+                }
+            }, 1000);
+        }
+        
+        // Создание растения
+        function createPlant(type, row, col) {
+            const plant = {
+                type,
+                row,
+                col,
+                health: type === 'wallnut' ? 300 : 100,
+                maxHealth: type === 'wallnut' ? 300 : 100,
+                lastShot: 0,
+                lastSun: 0,
+                element: null
+            };
+            
+            plants.push(plant);
+            plantsPlanted++;
+            
+            // Создание визуального элемента растения
+            const plantElement = document.createElement('div');
+            plantElement.className = `plant ${type}`;
+            plantElement.dataset.row = row;
+            plantElement.dataset.col = col;
+            
+            // Позиционирование
+            plantElement.style.left = `${col * cellWidth + 5}%`;
+            plantElement.style.top = `${row * cellHeight + 5}%`;
+            
+            lawn.appendChild(plantElement);
+            plant.element = plantElement;
+        }
+        
+        // Создание зомби
+        function createZombie(type, row) {
+            const settings = difficultySettings[wave];
+            const health = settings.health * (type === 'tough' ? 2 : type === 'fast' ? 0.8 : 1);
+            const speed = settings.speed * (type === 'fast' ? 1.5 : type === 'tough' ? 0.7 : 1);
+            
+            const zombie = {
+                type,
+                row,
+                health,
+                maxHealth: health,
+                speed,
+                element: null,
+                lastHit: 0
+            };
+            
+            zombies.push(zombie);
+            zombiesAlive++;
+            
+            // Создание визуального элемента зомби
+            const zombieElement = document.createElement('div');
+            zombieElement.className = `zombie ${type}`;
+            zombieElement.dataset.row = row;
+            
+            // Позиционирование
+            zombieElement.style.top = `${row * cellHeight}%`;
+            zombieElement.style.right = `-70px`;
+            
+            lawn.appendChild(zombieElement);
+            zombie.element = zombieElement;
+        }
+        
+        // Создание снаряда (гороха)
+        function createProjectile(row, col) {
+            const projectile = {
+                row,
+                col: col + 1,
+                x: (col + 1) * cellWidth,
+                y: row * cellHeight + cellHeight/2,
+                element: null,
+                damage: 20 + Math.floor(wave / 2) * 5
+            };
+            
+            projectiles.push(projectile);
+            
+            // Создание визуального элемента снаряда
+            const projectileElement = document.createElement('div');
+            projectileElement.className = 'projectile';
+            
+            // Позиционирование
+            projectileElement.style.left = `${col * cellWidth + 10}%`;
+            projectileElement.style.top = `${row * cellHeight + 15}%`;
+            
+            lawn.appendChild(projectileElement);
+            projectile.element = projectileElement;
+        }
+        
+        // Генерация солнца
+        function generateSun() {
+            // Солнце, падающее с неба
+            setInterval(() => {
+                if (!gameActive) return;
+                
+                const sun = {
+                    x: Math.random() * 80 + 10,
+                    y: -10,
+                    element: null,
+                    collected: false
+                };
+                
+                suns.push(sun);
+                
+                // Создание визуального элемента солнца
+                const sunElement = document.createElement('div');
+                sunElement.className = 'sun';
+                sunElement.textContent = '☀️';
+                
+                // Позиционирование
+                sunElement.style.left = `${sun.x}%`;
+                sunElement.style.top = `${sun.y}%`;
+                
+                // Обработчик клика для сбора солнца
+                sunElement.addEventListener('click', () => {
+                    if (!sun.collected) {
+                        sunCount += 25;
+                        updateUI();
+                        sun.collected = true;
+                        sunElement.remove();
+                        
+                        // Анимация сбора солнца
+                        sunElement.style.transition = 'all 0.5s';
+                        sunElement.style.transform = 'scale(0)';
+                        setTimeout(() => {
+                            if (sunElement.parentNode) sunElement.remove();
+                        }, 500);
+                    }
+                });
+                
+                lawn.appendChild(sunElement);
+                sun.element = sunElement;
+                
+                // Анимация падения солнца
+                const fallInterval = setInterval(() => {
+                    if (!gameActive || sun.collected) {
+                        clearInterval(fallInterval);
+                        return;
+                    }
+                    
+                    sun.y += 0.5;
+                    sunElement.style.top = `${sun.y}%`;
+                    
+                    // Если солнце упало за пределы экрана, удаляем его
+                    if (sun.y > 100) {
+                        clearInterval(fallInterval);
+                        sunElement.remove();
+                        const index = suns.indexOf(sun);
+                        if (index > -1) suns.splice(index, 1);
+                    }
+                }, 50);
+            }, 5000);
+            
+            // Солнце от подсолнухов
+            setInterval(() => {
+                if (!gameActive) return;
+                
+                plants.forEach(plant => {
+                    if (plant.type === 'sunflower') {
+                        const now = Date.now();
+                        if (now - plant.lastSun > 10000) {
+                            plant.lastSun = now;
+                            
+                            // Создаем солнце рядом с подсолнухом
+                            const sun = {
+                                x: plant.col * cellWidth + 5,
+                                y: plant.row * cellHeight + 5,
+                                element: null,
+                                collected: false
+                            };
+                            
+                            suns.push(sun);
+                            
+                            // Создание визуального элемента солнца
+                            const sunElement = document.createElement('div');
+                            sunElement.className = 'sun';
+                            sunElement.textContent = '☀️';
+                            
+                            // Позиционирование
+                            sunElement.style.left = `${sun.x}%`;
+                            sunElement.style.top = `${sun.y}%`;
+                            
+                            // Обработчик клика для сбора солнца
+                            sunElement.addEventListener('click', () => {
+                                if (!sun.collected) {
+                                    sunCount += 25;
+                                    updateUI();
+                                    sun.collected = true;
+                                    sunElement.remove();
+                                    
+                                    // Анимация сбора солнца
+                                    sunElement.style.transition = 'all 0.5s';
+                                    sunElement.style.transform = 'scale(0)';
+                                    setTimeout(() => {
+                                        if (sunElement.parentNode) sunElement.remove();
+                                    }, 500);
+                                }
+                            });
+                            
+                            lawn.appendChild(sunElement);
+                            sun.element = sunElement;
+                        }
+                    }
+                });
+            }, 1000);
+        }
+        
+        // Таймер между волнами
+        function startWaveTimer() {
+            if (waveInterval) clearInterval(waveInterval);
+            
+            waveTimer = 30;
+            waveTimerElement.textContent = waveTimer;
+            waveProgressElement.style.width = '0%';
+            
+            waveInterval = setInterval(() => {
+                if (!gameActive || waveActive) return;
+                
+                waveTimer--;
+                waveTimerElement.textContent = waveTimer;
+                waveProgressElement.style.width = `${100 - (waveTimer / 30 * 100)}%`;
+                
+                if (waveTimer <= 0) {
+                    startWave();
+                }
+            }, 1000);
+        }
+        
+        // Начать волну зомби
+        function startWave() {
+            if (!gameActive || waveActive) return;
+            
+            waveActive = true;
+            startWaveButton.disabled = true;
+            const settings = difficultySettings[wave];
+            
+            // Создаем зомби на случайных рядах
+            let zombiesSpawned = 0;
+            
+            const spawnZombie = () => {
+                if (!gameActive || zombiesSpawned >= settings.zombies) {
+                    // Проверяем, все ли зомби созданы
+                    if (zombiesSpawned >= settings.zombies) {
+                        // Волна начата, ждем пока все зомби будут убиты
+                        const checkWaveEnd = setInterval(() => {
+                            if (zombiesAlive === 0) {
+                                clearInterval(checkWaveEnd);
+                                waveActive = false;
+                                startWaveButton.disabled = false;
+                                
+                                // Если достигли последней волны - победа
+                                if (wave >= maxWave) {
+                                    winGame();
+                                } else {
+                                    // Переходим к следующей волне
+                                    wave++;
+                                    startWaveTimer();
+                                    updateUI();
+                                }
+                            }
+                        }, 1000);
+                    }
+                    return;
+                }
+                
+                const row = Math.floor(Math.random() * rows);
+                const type = settings.types[Math.floor(Math.random() * settings.types.length)];
+                createZombie(type, row);
+                zombiesSpawned++;
+                updateUI();
+                
+                // Следующий зомби
+                setTimeout(spawnZombie, settings.interval);
+            };
+            
+            // Запускаем спавн зомби
+            spawnZombie();
+            updateUI();
+        }
+        
+        // Игровой цикл
+        function gameLoop() {
+            if (!gameActive) return;
+            
+            // Движение снарядов
+            projectiles.forEach((projectile, pIndex) => {
+                projectile.col += 0.1;
+                
+                if (projectile.element) {
+                    projectile.element.style.left = `${projectile.col * cellWidth}%`;
+                    
+                    // Проверка столкновения со зомби
+                    zombies.forEach((zombie, zIndex) => {
+                        if (zombie.row === projectile.row) {
+                            const zombieRight = parseFloat(zombie.element.style.right);
+                            const zombieCol = 9 - (zombieRight + 70) / cellWidth / 10;
+                            
+                            if (zombieCol <= projectile.col + 0.2) {
+                                // Попадание по зомби
+                                zombie.health -= projectile.damage;
+                                
+                                // Анимация попадания
+                                zombie.element.classList.add('hit');
+                                setTimeout(() => {
+                                    zombie.element.classList.remove('hit');
+                                }, 300);
+                                
+                                // Удаляем снаряд
+                                projectile.element.remove();
+                                projectiles.splice(pIndex, 1);
+                                
+                                // Проверяем, убит ли зомби
+                                if (zombie.health <= 0) {
+                                    zombie.element.classList.add('dying');
+                                    setTimeout(() => {
+                                        if (zombie.element.parentNode) zombie.element.remove();
+                                    }, 1000);
+                                    
+                                    zombies.splice(zIndex, 1);
+                                    zombiesAlive--;
+                                    zombiesKilled++;
+                                    updateUI();
+                                }
+                            }
+                        }
+                    });
+                }
+                
+                // Удаляем снаряд, если он вышел за пределы экрана
+                if (projectile.col > 9) {
+                    if (projectile.element) projectile.element.remove();
+                    projectiles.splice(pIndex, 1);
+                }
+            });
+            
+            // Движение зомби
+            zombies.forEach(zombie => {
+                if (zombie.element) {
+                    const currentRight = parseFloat(zombie.element.style.right);
+                    zombie.element.style.right = `${currentRight + zombie.speed}px`;
+                    
+                    // Проверка столкновения с растениями
+                    const zombieCol = 9 - (currentRight + 70) / cellWidth / 10;
+                    
+                    plants.forEach((plant, pIndex) => {
+                        if (plant.row === zombie.row && Math.abs(plant.col - zombieCol) < 0.5) {
+                            // Зомби атакует растение
+                            plant.health -= zombie.type === 'tough' ? 2 : 1;
+                            
+                            // Обновляем состояние растения (для ореха)
+                            if (plant.type === 'wallnut') {
+                                const healthPercent = plant.health / plant.maxHealth;
+                                plant.element.classList.remove('damaged', 'critical');
+                                
+                                if (healthPercent < 0.5) {
+                                    plant.element.classList.add('damaged');
+                                }
+                                if (healthPercent < 0.2) {
+                                    plant.element.classList.add('critical');
+                                }
+                            }
+                            
+                            // Если растение уничтожено
+                            if (plant.health <= 0) {
+                                // Удаляем визуальный элемент растения
+                                if (plant.element && plant.element.parentNode) {
+                                    plant.element.style.transition = 'all 0.5s';
+                                    plant.element.style.opacity = '0';
+                                    plant.element.style.transform = 'scale(0)';
+                                    setTimeout(() => {
+                                        if (plant.element.parentNode) plant.element.remove();
+                                    }, 500);
+                                }
+                                
+                                // Удаляем растение из массива
+                                plants.splice(pIndex, 1);
+                            }
+                        }
+                    });
+                    
+                    // Проверка, дошел ли зомби до дома
+                    if (currentRight > 850) {
+                        gameOver();
+                    }
+                }
+            });
+            
+            // Стрельба растений-горохов
+            plants.forEach(plant => {
+                if (plant.type === 'peashooter') {
+                    const now = Date.now();
+                    if (now - plant.lastShot > 1500) {
+                        // Проверяем, есть ли зомби на этой линии
+                        const zombieOnRow = zombies.find(z => z.row === plant.row);
+                        if (zombieOnRow) {
+                            plant.lastShot = now;
+                            createProjectile(plant.row, plant.col);
+                            
+                            // Анимация стрельбы
+                            plant.element.classList.add('shooting');
+                            setTimeout(() => {
+                                plant.element.classList.remove('shooting');
+                            }, 500);
+                        }
+                    }
+                }
+            });
+            
+            // Продолжаем игровой цикл
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Обновление интерфейса
+        function updateUI() {
+            sunCountElement.textContent = sunCount;
+            zombieCountElement.textContent = zombiesAlive;
+            plantCountElement.textContent = plants.length;
+            waveElement.textContent = wave;
+            
+            // Обновляем доступность растений
+            plantCards.forEach(card => {
+                const cost = parseInt(card.dataset.cost);
+                const plantType = card.dataset.plant;
+                
+                if (sunCount < cost || cooldowns[plantType]) {
+                    card.classList.add('disabled');
+                } else {
+                    card.classList.remove('disabled');
+                }
+            });
+        }
+        
+        // Конец игры
+        function gameOver() {
+            gameActive = false;
+            finalWaveElement.textContent = wave;
+            finalZombiesElement.textContent = zombiesKilled;
+            finalPlantsElement.textContent = plantsPlanted;
+            gameOverMessage.style.display = 'block';
+        }
+        
+        // Победа
+        function winGame() {
+            gameActive = false;
+            winWaveElement.textContent = wave;
+            winZombiesElement.textContent = zombiesKilled;
+            winPlantsElement.textContent = plantsPlanted;
+            winMessage.style.display = 'block';
+        }
+        
+        // Перезапуск игры
+        function restartGame() {
+            // Сброс переменных
+            sunCount = 150;
+            selectedPlant = null;
+            wave = 1;
+            zombiesAlive = 0;
+            zombiesKilled = 0;
+            plantsPlanted = 0;
+            gameActive = true;
+            waveActive = false;
+            plants = [];
+            zombies = [];
+            projectiles = [];
+            suns = [];
+            cooldowns = {};
+            
+            // Очистка игрового поля
+            document.querySelectorAll('.plant, .zombie, .projectile, .sun').forEach(el => el.remove());
+            
+            // Скрытие сообщений
+            gameOverMessage.style.display = 'none';
+            winMessage.style.display = 'none';
+            
+            // Снятие выделения с растений
+            plantCards.forEach(card => {
+                card.classList.remove('selected', 'disabled', 'cooldown');
+                const overlay = card.querySelector('.cooldown-overlay');
+                overlay.style.display = 'none';
+            });
+            
+            // Снятие подсветки с клеток
+            removeHighlight();
+            
+            // Сброс кнопки волны
+            startWaveButton.disabled = false;
+            
+            // Перезапуск таймера волны
+            startWaveTimer();
+            
+            // Обновление интерфейса
+            updateUI();
+            
+            // Запуск игрового цикла
+            gameLoop();
+        }
+        
+        // Запуск игры при загрузке страницы
+        window.onload = () => {
+            initGame();
+        };
+    </script>
+</body>
+</html>
